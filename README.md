@@ -9,8 +9,10 @@ Cooperative 3D party-game prototype. Each player gets one simple responsibility;
 - Generic raycast interaction through `IInteractable`.
 - Prototype button, lever, valve, and door interactions.
 - Runtime-built Reactor Room graybox using primitives.
+- Configurable temperature, pressure, cooling, reactor danger states, and a three-minute round loop.
+- Prototype reactor HUD with live values and success/failure result.
 
-Reactor simulation, jobs, round flow, Netcode for GameObjects, and Steam integration are not implemented yet.
+Jobs, Netcode for GameObjects, and Steam integration are not implemented yet.
 
 ## Open and test
 

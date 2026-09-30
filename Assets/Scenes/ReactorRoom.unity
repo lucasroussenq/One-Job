@@ -123,3 +123,24 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: ONEJOB.Runtime::OneJob.Scenarios.ReactorRoom.ReactorRoomBootstrap
   buildOnAwake: 1
+  simulationSettings:
+    roundDurationSeconds: 180
+    criticalGraceSeconds: 10
+    coolingStartsOn: 0
+    valveAStartsOpen: 0
+    valveBStartsOpen: 0
+    emergencyStartsPressed: 0
+    initialTemperature: 45
+    minimumTemperature: 0
+    maximumTemperature: 140
+    heatingRatePerSecond: 4
+    coolingRatePerSecond: 6
+    temperatureWarningThreshold: 75
+    temperatureCriticalThreshold: 100
+    initialPressure: 40
+    minimumPressure: 0
+    maximumPressure: 120
+    closedValvePressureRatePerSecond: 3
+    openValvePressureRatePerSecond: 5
+    pressureWarningThreshold: 75
+    pressureCriticalThreshold: 95

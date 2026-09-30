@@ -1,5 +1,6 @@
 using OneJob.Interaction;
 using OneJob.Player;
+using OneJob.Reactor;
 using OneJob.UI;
 using UnityEngine;
 
@@ -16,9 +17,14 @@ namespace OneJob.Scenarios.ReactorRoom
         private static readonly Color WarningColor = new Color(0.95f, 0.18f, 0.05f);
 
         [SerializeField] private bool buildOnAwake = true;
+        [SerializeField] private ReactorSimulationSettings simulationSettings = new ReactorSimulationSettings();
 
         private bool hasBuilt;
         private GrayboxFactory factory;
+        private LeverInteractable coolingLever;
+        private ValveInteractable valveA;
+        private ValveInteractable valveB;
+        private ButtonInteractable emergencyButton;
 
         private void Awake()
         {
@@ -46,6 +52,7 @@ namespace OneJob.Scenarios.ReactorRoom
             BuildReactor();
             BuildControlStations();
             BuildValves();
+            BuildSimulation();
             BuildDoor();
             BuildSpawnPoints();
             BuildPlayer();
@@ -91,13 +98,13 @@ namespace OneJob.Scenarios.ReactorRoom
 
         private void BuildControlStations()
         {
-            BuildLeverStation("COOLING", new Vector3(-6f, 1.1f, -6.7f));
+            coolingLever = BuildLeverStation("COOLING", new Vector3(-6f, 1.1f, -6.7f));
             BuildStatusStation("PRESSURE", new Vector3(-2f, 1.1f, -6.7f), new Color(1f, 0.65f, 0.05f));
             BuildStatusStation("TEMPERATURE", new Vector3(2f, 1.1f, -6.7f), new Color(0.15f, 0.85f, 0.3f));
-            BuildEmergencyStation(new Vector3(6f, 1.1f, -6.7f));
+            emergencyButton = BuildEmergencyStation(new Vector3(6f, 1.1f, -6.7f));
         }
 
-        private void BuildLeverStation(string label, Vector3 position)
+        private LeverInteractable BuildLeverStation(string label, Vector3 position)
         {
             Transform station = factory.CreateEmpty($"{label} Station", position);
             factory.CreatePrimitive(PrimitiveType.Cube, "Console", Vector3.zero, new Vector3(2.6f, 1.8f, 0.8f), ConsoleColor, station);
@@ -107,7 +114,8 @@ namespace OneJob.Scenarios.ReactorRoom
 
             LeverInteractable lever = station.gameObject.AddComponent<LeverInteractable>();
             lever.ConfigurePresentation(handle.transform, indicator.GetComponent<Renderer>());
-            lever.Configure("Turn cooling ON", "Turn cooling OFF", false);
+            lever.Configure("Turn cooling ON", "Turn cooling OFF", simulationSettings.coolingStartsOn);
+            return lever;
         }
 
         private void BuildStatusStation(string label, Vector3 position, Color statusColor)
@@ -118,7 +126,7 @@ namespace OneJob.Scenarios.ReactorRoom
             factory.CreatePrimitive(PrimitiveType.Sphere, "Status Light", new Vector3(0f, 0.2f, 0.47f), Vector3.one * 0.3f, statusColor, station);
         }
 
-        private void BuildEmergencyStation(Vector3 position)
+        private ButtonInteractable BuildEmergencyStation(Vector3 position)
         {
             Transform station = factory.CreateEmpty("Emergency Station", position);
             factory.CreatePrimitive(PrimitiveType.Cube, "Console", Vector3.zero, new Vector3(2.6f, 1.8f, 0.8f), ConsoleColor, station);
@@ -128,16 +136,17 @@ namespace OneJob.Scenarios.ReactorRoom
 
             ButtonInteractable button = station.gameObject.AddComponent<ButtonInteractable>();
             button.ConfigurePresentation(cap.transform, cap.GetComponent<Renderer>());
-            button.Configure("Press EMERGENCY", "Reset EMERGENCY", false);
+            button.Configure("Press EMERGENCY", "Reset EMERGENCY", simulationSettings.emergencyStartsPressed);
+            return button;
         }
 
         private void BuildValves()
         {
-            BuildValve("VALVE A", new Vector3(-4.2f, 1.1f, 1.2f), false);
-            BuildValve("VALVE B", new Vector3(4.2f, 1.1f, 1.2f), false);
+            valveA = BuildValve("VALVE A", new Vector3(-4.2f, 1.1f, 1.2f), simulationSettings.valveAStartsOpen);
+            valveB = BuildValve("VALVE B", new Vector3(4.2f, 1.1f, 1.2f), simulationSettings.valveBStartsOpen);
         }
 
-        private void BuildValve(string label, Vector3 position, bool startsOpen)
+        private ValveInteractable BuildValve(string label, Vector3 position, bool startsOpen)
         {
             Transform assembly = factory.CreateEmpty(label, position);
             GameObject pipe = factory.CreatePrimitive(PrimitiveType.Cylinder, "Pipe", Vector3.zero, new Vector3(0.35f, 1.3f, 0.35f), SteelColor, assembly);
@@ -150,6 +159,36 @@ namespace OneJob.Scenarios.ReactorRoom
             ValveInteractable valve = assembly.gameObject.AddComponent<ValveInteractable>();
             valve.ConfigurePresentation(wheel.transform, indicator.GetComponent<Renderer>());
             valve.Configure($"Open {label}", $"Close {label}", startsOpen);
+            return valve;
+        }
+
+        private void BuildSimulation()
+        {
+            Transform simulationRoot = factory.CreateEmpty("Reactor Simulation", Vector3.zero);
+            TemperatureSystem temperature = simulationRoot.gameObject.AddComponent<TemperatureSystem>();
+            PressureSystem pressure = simulationRoot.gameObject.AddComponent<PressureSystem>();
+            CoolingSystem cooling = simulationRoot.gameObject.AddComponent<CoolingSystem>();
+            ValveSystem valveASystem = simulationRoot.gameObject.AddComponent<ValveSystem>();
+            ValveSystem valveBSystem = simulationRoot.gameObject.AddComponent<ValveSystem>();
+            EmergencyButtonSystem emergency = simulationRoot.gameObject.AddComponent<EmergencyButtonSystem>();
+
+            coolingLever.StateChanged += cooling.SetCooling;
+            valveA.StateChanged += valveASystem.SetOpen;
+            valveB.StateChanged += valveBSystem.SetOpen;
+            emergencyButton.StateChanged += emergency.SetPressed;
+
+            ReactorController reactor = simulationRoot.gameObject.AddComponent<ReactorController>();
+            reactor.Configure(
+                simulationSettings,
+                temperature,
+                pressure,
+                cooling,
+                valveASystem,
+                valveBSystem,
+                emergency);
+
+            ReactorStatusHud statusHud = simulationRoot.gameObject.AddComponent<ReactorStatusHud>();
+            statusHud.SetReactor(reactor);
         }
 
         private void BuildDoor()
