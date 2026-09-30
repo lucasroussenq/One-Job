@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -14,6 +15,8 @@ namespace OneJob.Interaction
         [SerializeField] private UnityEvent<bool> stateChanged = new UnityEvent<bool>();
 
         public bool IsActive { get; private set; }
+
+        public event Action<bool> StateChanged;
 
         public override string InteractionPrompt => IsActive ? activePrompt : inactivePrompt;
 
@@ -43,6 +46,7 @@ namespace OneJob.Interaction
             IsActive = value;
             ApplyVisualState(value);
             stateChanged.Invoke(value);
+            StateChanged?.Invoke(value);
         }
 
         protected virtual void Awake()
